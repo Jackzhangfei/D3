@@ -1,0 +1,22 @@
+/* 标签 */
+text {
+    font-size: 2em;
+    font-family: sans-serif;
+}
+
+/* class名为tick的下面的text标签 */
+.tick text {
+    font-size: 1.6em;
+    fill: #635F5D;
+}
+
+/* class名为tick的下面的line标签 */
+.tick line {
+    stroke: #C0C0BB
+}
+
+/* id为population */
+#population {
+    font-size: 3em;
+    stroke: #8E8883
+}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <title>Document</title>
+</head>
+
+<body>
+    <svg id="mainsvg" class="svgs" width="960" height="500"></svg>
+
+    <script>
+        // 获取画布
+        const svg = d3.select('#mainsvg')
+        const height = +svg.attr('height')
+        const width = +svg.attr('width')
+        const margin = { top: 60, left: 30, bottom: 30, right: 150 }
+        const innerwidth = width - margin.right - margin.left
+        const innerHeight = height - margin.top - margin.bottom
+
+        const render = function (data) {
+            // 设置比列尺 参考https://vimsky.com/examples/usage/d3-js-d3-scaleband-function.html
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(data, data => data.population)])
+                .range([0, innerwidth])
+
+            const yScale = d3.scaleBand()
+                .domain(data.map(datum => datum.country))
+                .range([0, innerHeight])
+                .padding(0.1)
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left}, ${margin.top})`);
+            g.selectAll('rect')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('y', datum => yScale(datum.country))
+                .attr('width', datum => { return xScale(datum.population) })
+                .attr('height', yScale.bandwidth())
+                .attr('fill', 'skyblue')
+
+
+            // Adding axes
+            g.append('g').call(d3.axisLeft(yScale));
+            g.append('g').call(d3.axisBottom(xScale))
+                .attr('transform', `translate(${0}, ${innerHeight})`);
+        }
+
+        d3.csv('./data/population.csv').then(
+            response => {
+                console.log(response)
+                response.forEach(element => {
+                    element.population = +element.population
+                });
+                console.log(response)
+                render(response)
+            },
+            error => {
+                console.log(error)
+            }
+        )
+
+    </script>
+</body>
+
+</html>

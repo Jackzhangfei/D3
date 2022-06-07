@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <link rel="stylesheet" href="./css/themeriver.css">
+</head>
+
+<body>
+    <svg class="svgs" height="1650" width="920"></svg>
+
+    <script>
+        const svg = d3.select('.svgs')
+
+        var defs = svg.append('defs');
+        var gradient = defs.append('linearGradient')
+            .attr('id', 'linearGradient')
+
+        gradient.append('stop')
+            .attr('class', 'start')
+            .attr('offset', '0%')
+            .attr('stop-color', '#226B00')
+            .attr('stop-opacity', 1)
+
+        gradient.append('stop')
+            .attr('class', 'start')
+            .attr('offset', '100%')
+            .attr('stop-color', '#DD6B66')
+            .attr('stop-opacity', 1)
+
+
+        let radialGrad = defs.append('radialGradient')
+            .attr('id', 'radialGradient')
+            .attr('r', 0.5)
+        radialGrad.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", "#0000FF")
+        radialGrad.append("stop")
+            .attr("offset", "50%")
+            .attr("stop-color", "#00FF00")
+        radialGrad.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", "#FF8500")
+
+        const width = +svg.attr('width');
+        const height = +svg.attr('height')
+        const margin = { top: 100, bottom: 100, right: 120, left: 120 }
+        const innerHeight = height - margin.bottom - margin.top
+        const innerwidth = width - margin.left - margin.right;
+
+        const xValue = data => dates.indexOf(data['日期'])
+
+        const yValue = data => data['新增确诊'];
+        let low_max = 4000;
+        let up_max = 1000;
+        let xScale, yScale, nyScale;
+        let maxX, maxY;
+        let dates;
+        let aduration = 1000;
+        let metapop;
+
+        const xAxisLabel = '';
+        const yAxislabel = '新增人数';
+
+        var province_color = {
+            "广东": "url(#linearGradient)",
+            "河南": "#759AA0",
+            "浙江": "#E69D87",
+            "湖南": "#8DC1A9",
+            "安徽": "#EA7E53",
+            "江西": "#EEDD78",
+            "江苏": "#73A373",
+            "重庆": "#73B9BC",
+            "山东": "#7289AB",
+            "四川": "#91CA8C",
+            "黑龙江": "#F49F42",
+            "北京": "#AA312C",
+            "上海": "#39656D",
+            "福建": "#B35E45",
+            "河北": "#4B8E6F",
+            "陕西": "#B6481C",
+            "广西": "#BBA838",
+            "云南": "#386F38",
+            "海南": "#388589",
+            "贵州": "#385177",
+            "山西": "#50964A",
+            "辽宁": "#C16B0D",
+            "天津": "#FF190F",
+            "甘肃": "#45BFD3",
+            "吉林": "#FF5F2F",
+            "内蒙古": "#50F3A8",
+            "新疆": "#FF4800",
+            "宁夏": "#FFDE1A",
+            "香港": "#41D541",
+            "青海": "#32E7EF",
+            "台湾": "#ef638e",
+            "澳门": "#3B7CDE",
+            "西藏": "#58FD4A",
+            //"湖北":"#FF8500"
+            "湖北": "url(#radialGrad)"
+        }
+
+        const renderinit = function (data) {
+            xScale = d3.scaleLinear()
+                .domain([0, 22])
+                .range([0, innerwidth])
+
+            yScale = d3.scaleLinear()
+                .domain([-low_max, 0, up_max])
+                .range([innerHeight, innerHeight / 2, 0])
+                .nice();
+
+            nyScale = d3.scaleLinear()
+                .domain([low_max, 0, -up_max])
+                .range([innerHeight, innerHeight / 2, 0])
+                .nice();
+
+            maxX = xScale(d3.max(data, xValue));
+            maxY = yScale(d3.max(data, yValue));
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left}, ${margin.top})`)
+                .attr('id', 'maingroup');
+
+            svg.append('g')
+                .attr('transform', `translate(${margin.left}, ${margin.top})`)
+                .attr('id', 'hubeigroup');
+
+
+        }
+        d3.csv('./data/province.csv').then(
+            function (data) {
+                data.forEach(datum => {
+                    // pre-process the data; 
+                    datum['确诊人数'] = +(datum['确诊人数']);
+                    datum['治愈人数'] = +(datum['治愈人数']);
+                    datum['死亡人数'] = +(datum['死亡人数']);
+                    datum['新增确诊'] = +(datum['新增确诊']);
+                });
+
+                // delete '总计'; ,filter函数需要一个变量进行接受
+                data = data.filter(datum => { return datum['省份'] !== '总计' });
+
+                // remove duplicated items; 
+                alldates = Array.from(new Set(data.map(datum => datum['日期'])));
+
+                // make sure dates are listed according to real time order; 
+                alldates = alldates.sort(function (a, b) {
+                    // turn your strings into dates, and then subtract them
+                    // to get a value that is either negative, positive, or zero.
+                    return new Date(b.date) - new Date(a.date);
+                });
+                dates = alldates;
+
+                // generate sequential data; 
+                let sequential = [];
+                alldates.forEach(datum => {
+                    sequential.push([]);
+                });
+                data.forEach(datum => {
+                    sequential[alldates.indexOf(datum['日期'])].push(datum);
+                });
+                // console.log(sequential);
+
+                // split data from Hu-Bei and not from Hu-Bei; 
+                data_hubei = data.filter(datum => { return datum['省份'] === '湖北' });
+                data = data.filter(datum => { return datum['省份'] !== '湖北' });
+
+                // stack data; 
+                let prestack = seqgen(data);
+                let prestack_hubei = seqgen(data_hubei);
+                // let keys = Array.from(new Set(data.map( datum => datum['省份'])));
+                // sort according to '累计确诊' and prepare keys; 
+                const sortedforkey = sequential[sequential.length - 1].sort((a, b) => b['确诊人数'] - a['确诊人数']);
+                let keys = sortedforkey.map(d => d['省份']);
+                keys = keys.filter(d => { return d !== '湖北' });
+                let keys_hubei = Array.from(new Set(data_hubei.map(datum => datum['省份'])));
+
+                // generate low_max and up_max for Y-scale; 
+                up_max = d3.max(sequential, seq => {
+                    // console.log(seq);
+                    result = 0;
+                    seq.forEach(s => {
+                        if (s['省份'] !== '湖北') {
+                            result += yValue(s);
+                        }
+                    })
+                    return result;
+                })
+                low_max = d3.max(sequential, seq => {
+                    result = 0;
+                    seq.forEach(s => {
+                        if (s['省份'] === '湖北') {
+                            result += yValue(s);
+                        }
+                    })
+                    return result;
+                })
+                console.log(low_max, up_max)
+
+                // initialize the chart; 
+                renderinit(data);
+
+                const area = d3.area()
+                    .curve(d3.curveBundle.beta(1.0)) // default is d3.curveLinear
+                    .x(d => xScale(xValue(d.data)))
+                    .y0(d => yScale(d[0]))
+                    .y1(d => yScale(d[1]));
+
+                const area_hubei = d3.area()
+                    .curve(d3.curveBundle.beta(1.0))
+                    .x((d) => xScale(xValue(d.data)))
+                    .y0(d => nyScale(d[0]))
+                    .y1(d => nyScale(d[1]));
+
+                // set the animation interval; 
+                render(prestack, keys, area);
+                render(prestack_hubei, keys_hubei, area_hubei);
+            },
+            error => {
+                console.log(error)
+            }
+        );
+    </script>
+</body>
+
+</html>

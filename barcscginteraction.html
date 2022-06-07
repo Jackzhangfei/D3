@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <script src="https://d3js.org/d3.v5.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+
+    <svg class="svgs" height="900" width="1600"></svg>
+
+    <script>
+        const svg = d3.select('.svgs')
+        const width = +svg.attr('width')
+        const height = +svg.attr('height')
+        const margin = { top: 20, right: 20, bottom: 60, left: 110 };
+        const innerHeight = height - margin.top - margin.bottom
+        const innerwidth = width - margin.left - margin.right
+        let thedata = null;
+        let selected = null;
+        const render = function (data) {
+            // 设置标尺
+            const xScale = d3.scaleLinear()
+                .domain([0, d3.max(data, data => data.value)])
+                .range([0, innerwidth])
+
+            const yScale = d3.scaleBand()
+                .domain(data.map(data => data.name))
+                .range([0, innerHeight])
+                .padding(0.1)
+
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`)
+                .attr('id', 'maingroup')
+            g.selectAll('rect')
+                .data(data)
+                .enter()
+                .append('rect')
+                // 鼠标位于上面，进行颜色修改
+                .on('mouseover', datum => { selected = datum.id; renderUpdate(); })
+                .on('mouseout', () => { selected = null; renderUpdate(); })
+                .attr('x', 0)
+                .attr('y', data => {
+                    return yScale(data.name)
+
+                }).transition()
+                .duration(2000)
+                .attr('y', data => {
+                    return yScale(data.name)
+
+                })
+                .attr('width', data => {
+                    return xScale(data.value)
+                })
+                .attr('height', yScale.bandwidth())
+                .attr('fill', 'steelblue')
+
+            // 添加轴
+            let yAxisGroup = g.append('g').call(d3.axisLeft(yScale))
+                .attr('id', 'yAxisGroup');
+
+            let xAxisGroup = g.append('g').call(d3.axisBottom(xScale))
+                .attr('transform', `translate(${0}, ${innerHeight})`);
+
+            // 添加标题
+            g.append('text')
+                .attr('y', innerHeight + 50)
+                .attr('x', innerWidth / 2)
+                .text('Value')
+                .attr('id', 'value')
+                .attr('font-size', '2em');
+
+            g.append('text')
+                .text('Members in CSCG')
+                .attr('y', 20)
+                .attr('x', innerWidth / 2 - 100)
+                .attr('font-size', '3em');
+
+        }
+
+        const renderUpdate = function () {
+            let rects = d3.select('.svgs').selectAll('rect').data(thedata);
+            rects.attr('fill', (data) => data.id == selected ? '#a524e0' : 'steelblue')
+        }
+        d3.csv('./data/vma.csv').then(
+
+            response => {
+
+                thedata = response;
+                response.forEach(element => {
+                    element.value = +element.value
+                });
+                for (let i = 0; i < response.length; i++) {
+                    response[i].id = i;
+                }
+                render(response)
+            },
+            error => {
+                console.log(error)
+            }
+        )
+    </script>
+</body>
+
+</html>

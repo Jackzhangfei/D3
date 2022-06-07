@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Document</title>
+    <link rel="stylesheet" href="./css//barchart.css">
+    <script src="https://d3js.org/d3.v5.js"></script>
+</head>
+
+<body>
+
+    <svg width="960" height="500" id="mainsvg" class="svgs"></svg>
+
+    <script>
+        // 获取到画布对象
+        const svg = d3.select('#mainsvg');
+        const width = +svg.attr('width');
+        const height = +svg.attr('height');
+        const margin = { top: 60, right: 30, bottom: 60, left: 150 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        // 此处为箭头函数的特殊写法
+        const xValue = data => data.population
+        // console.log(xValue)
+        const yValue = (data) => {
+            console.log(data)
+            return data.country
+        };
+
+        const render = function (data) {
+            // 定义标尺
+            const xScale = d3.scaleLinear()
+                // max函数用法参考：https://www.cnblogs.com/0769fe/p/6559878.html
+                .domain([0, d3.max(data,
+                    data => {
+                        // console.log(data)
+                        return data.population
+                    }
+                )])
+                .range([0, innerWidth])
+
+            const yScale = d3.scaleBand()
+                .domain(data.map(yValue))
+                .range([0, innerHeight])
+                .padding(0.1)
+
+            // 通过在svg下面设置一个g标签来规范画布，从而使得各个绘制的内容。
+            const g = svg.append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            // 绑定数据，矩形
+            g.selectAll('rect')
+                .data(data)
+                .enter()
+                .append('rect')
+                // 设置矩形的位置
+                .attr('y', datum => {
+                    console.log(datum)
+                    return yScale(yValue(datum))
+                })
+                // 设置矩形的宽度
+                .attr('width', (datum) => {
+                    // console.log(datum)
+                    return xScale(xValue(datum))
+                })
+                // 设置矩形的高度
+                .attr('height', yScale.bandwidth())
+                // 设置矩形的填充颜色
+                .attr('fill', 'steelblue')
+
+            // 绘制轴
+            const yAxis = d3.axisLeft(yScale)
+            const xAxis = d3.axisBottom(xScale)
+                .tickFormat(d3.format('.3s'))
+                .tickSize(-innerHeight)
+
+            let yAxisGroup = g.append('g')
+                .call(yAxis)
+
+            // 删除线
+            yAxisGroup.selectAll('.domain, .tick line').remove();
+
+            let xAxisGroup = g.append('g').call(xAxis)
+                .attr('transform', `translate(${0}, ${innerHeight})`);
+            xAxisGroup.append('text')
+                .attr('y', 50)
+                .attr('x', innerWidth / 2)
+                .attr('fill', 'black').text('Population')
+                .attr('id', 'population');
+            xAxisGroup.selectAll('.domain').remove();
+
+            // 添加标题
+            g.append('text')
+                .text('Top 10 Most Populous Countries')
+                .attr('y', -10)
+                .attr('x', 80);
+        }
+
+
+
+        d3.csv('./data/population.csv')
+            .then(
+                response => {
+                    response.forEach(datum => {
+                        // 将字符串类型的数据变成数字类型的数据
+                        datum.population = +(datum.population);
+                    })
+                    // console.log(response)
+                    // 对数据进行渲染
+                    render(response);
+                }
+            )
+    </script>
+</body>
+
+</html>
